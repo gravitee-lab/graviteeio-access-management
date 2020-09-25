@@ -21,14 +21,16 @@ import com.mongodb.client.model.Aggregates;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import io.gravitee.am.common.analytics.Field;
 import io.gravitee.am.common.utils.RandomString;
+import io.gravitee.am.model.ReferenceType;
 import io.gravitee.am.model.User;
 import io.gravitee.am.model.analytics.AnalyticsQuery;
 import io.gravitee.am.model.common.Page;
-import io.gravitee.am.model.ReferenceType;
 import io.gravitee.am.model.scim.Address;
 import io.gravitee.am.model.scim.Attribute;
 import io.gravitee.am.model.scim.Certificate;
 import io.gravitee.am.repository.management.api.UserRepository;
+import io.gravitee.am.repository.management.api.search.FilterCriteria;
+import io.gravitee.am.repository.mongodb.common.FilterCriteriaParser;
 import io.gravitee.am.repository.mongodb.management.internal.model.UserMongo;
 import io.gravitee.am.repository.mongodb.management.internal.model.scim.AddressMongo;
 import io.gravitee.am.repository.mongodb.management.internal.model.scim.AttributeMongo;
@@ -119,9 +121,17 @@ public class MongoUserRepository extends AbstractManagementMongoRepository imple
     }
 
     @Override
-    public Single<Page<User>> search(String domain, String query, int page, int size) {
+    public Single<Page<User>> search(ReferenceType referenceType, String referenceId, FilterCriteria criteria, int page, int size) {
+        BasicDBObject searchQuery = BasicDBObject.parse(FilterCriteriaParser.parse(criteria));
 
-        return search(DOMAIN, domain, query, page, size);
+        Bson mongoQuery = and(
+                eq(FIELD_REFERENCE_TYPE, referenceType.name()),
+                eq(FIELD_REFERENCE_ID, referenceId),
+                searchQuery);
+
+        Single<Long> countOperation = Observable.fromPublisher(usersCollection.countDocuments(mongoQuery)).first(0l);
+        Single<Set<User>> usersOperation = Observable.fromPublisher(usersCollection.find(mongoQuery).skip(size * page).limit(size)).map(this::convert).collect(LinkedHashSet::new, Set::add);
+        return Single.zip(countOperation, usersOperation, (count, users) -> new Page<>(users, 0, count));
     }
 
     @Override

@@ -184,7 +184,7 @@ public class MongoUserRepositoryTest extends AbstractManagementRepositoryTest {
         userRepository.create(user2).blockingGet();
 
         // fetch user
-        TestObserver<Page<User>> testObserver = userRepository.search(domain, "testUsername", 0, 10).test();
+        TestObserver<Page<User>> testObserver = userRepository.search(ReferenceType.DOMAIN, domain, "testUsername", 0, 10).test();
         testObserver.awaitTerminalEvent();
 
         testObserver.assertComplete();
@@ -211,7 +211,7 @@ public class MongoUserRepositoryTest extends AbstractManagementRepositoryTest {
         userRepository.create(user2).blockingGet();
 
         // fetch user
-        TestObserver<Page<User>> testObserver = userRepository.search(domain, "testUsername*", 0, 10).test();
+        TestObserver<Page<User>> testObserver = userRepository.search(ReferenceType.DOMAIN, domain, "testUsername*", 0, 10).test();
         testObserver.awaitTerminalEvent();
 
         testObserver.assertComplete();
@@ -242,7 +242,7 @@ public class MongoUserRepositoryTest extends AbstractManagementRepositoryTest {
         userRepository.create(user3).blockingGet();
 
         // fetch user (page 0)
-        TestObserver<Page<User>> testObserverP0 = userRepository.search(domain, "testUsername*", 0, 2).test();
+        TestObserver<Page<User>> testObserverP0 = userRepository.search(ReferenceType.DOMAIN, domain, "testUsername*", 0, 2).test();
         testObserverP0.awaitTerminalEvent();
 
         testObserverP0.assertComplete();
@@ -254,7 +254,7 @@ public class MongoUserRepositoryTest extends AbstractManagementRepositoryTest {
         });
 
         // fetch user (page 1)
-        TestObserver<Page<User>> testObserverP1 = userRepository.search(domain, "testUsername*", 1, 2).test();
+        TestObserver<Page<User>> testObserverP1 = userRepository.search(ReferenceType.DOMAIN, domain, "testUsername*", 1, 2).test();
         testObserverP1.awaitTerminalEvent();
 
         testObserverP1.assertComplete();

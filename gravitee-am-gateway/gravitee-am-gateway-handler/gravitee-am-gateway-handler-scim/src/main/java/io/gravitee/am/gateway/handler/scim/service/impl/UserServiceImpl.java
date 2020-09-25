@@ -24,11 +24,14 @@ import io.gravitee.am.gateway.handler.scim.exception.UniquenessException;
 import io.gravitee.am.gateway.handler.scim.model.*;
 import io.gravitee.am.gateway.handler.scim.service.GroupService;
 import io.gravitee.am.gateway.handler.scim.service.UserService;
+import io.gravitee.am.gateway.handler.scim.model.filter.Filter;
 import io.gravitee.am.identityprovider.api.DefaultUser;
 import io.gravitee.am.model.Domain;
-import io.gravitee.am.model.Role;
 import io.gravitee.am.model.ReferenceType;
+import io.gravitee.am.model.Role;
+import io.gravitee.am.model.common.Page;
 import io.gravitee.am.repository.management.api.UserRepository;
+import io.gravitee.am.repository.management.api.search.FilterCriteria;
 import io.gravitee.am.service.RoleService;
 import io.gravitee.am.service.exception.*;
 import io.gravitee.am.service.validators.UserValidator;
@@ -68,9 +71,13 @@ public class UserServiceImpl implements UserService {
     private IdentityProviderManager identityProviderManager;
 
     @Override
-    public Single<ListResponse<User>> list(int page, int size, String baseUrl) {
+    public Single<ListResponse<User>> list(Filter scimFilter, int page, int size, String baseUrl) {
         LOGGER.debug("Find users by domain: {}", domain.getId());
-        return userRepository.findByDomain(domain.getId(), page, size)
+        Single<Page<io.gravitee.am.model.User>> findUsers = scimFilter != null ?
+                userRepository.search(ReferenceType.DOMAIN, domain.getId(), convert(scimFilter), page, size) :
+                userRepository.findByDomain(domain.getId(), page, size);
+
+        return findUsers
                 .flatMap(userPage -> {
                     // A negative value SHALL be interpreted as "0".
                     // A value of "0" indicates that no resource results are to be returned except for "totalResults".
@@ -90,6 +97,19 @@ public class UserServiceImpl implements UserService {
                     LOGGER.error("An error occurs while trying to find users by domain {}", domain, ex);
                     return Single.error(new TechnicalManagementException(String.format("An error occurs while trying to find users by domain %s", domain), ex));
                 });
+    }
+
+    private FilterCriteria convert(Filter scimFilter) {
+        if (scimFilter == null) {
+            return null;
+        }
+        FilterCriteria filterCriteria = new FilterCriteria(
+                scimFilter.getOperator().getValue(),
+                scimFilter.getFilterAttribute().toString(),
+                scimFilter.getFilterValue(),
+                scimFilter.isQuoteFilterValue(),
+                scimFilter.getFilterComponents() != null ? scimFilter.getFilterComponents().stream().map(this::convert).collect(Collectors.toList()) : null);
+        return filterCriteria;
     }
 
     @Override
