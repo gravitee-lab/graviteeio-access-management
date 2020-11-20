@@ -37,6 +37,7 @@ workflows:
     when:
       equal: [ release, << pipeline.parameters.gio_action >> ]
     jobs:
+      # previous simple definition : 
       # - gravitee/release:
           # context: cicd-orchestrator
           # dry_run: << pipeline.parameters.dry_run >>
